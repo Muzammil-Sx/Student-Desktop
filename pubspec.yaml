@@ -1,0 +1,53 @@
+name: student_desktop
+description: "Student Desktop — Offline-first Flutter Desktop application."
+publish_to: 'none'
+version: 0.1.0+1
+
+environment:
+  sdk: ^3.5.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # State management
+  flutter_riverpod: ^2.6.1
+
+  # Routing
+  go_router: ^14.6.2
+
+  # Networking
+  dio: ^5.7.0
+  connectivity_plus: ^6.1.0
+
+  # Local database (offline-first)
+  drift: ^2.22.1
+  sqlite3_flutter_libs: ^0.5.26
+  path_provider: ^2.1.5
+  path: ^1.9.0
+
+  # Key-value cache
+  hive: ^2.2.3
+  hive_flutter: ^1.1.0
+
+  # Desktop window management
+  window_manager: ^0.4.3
+
+  # Responsive
+  responsive_framework: ^1.5.1
+
+  # Utils
+  collection: ^1.19.0
+  intl: ^0.20.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+  build_runner: ^2.4.13
+  drift_dev: ^2.22.1
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/images/
