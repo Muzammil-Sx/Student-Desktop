@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_constants.dart';
+import '../../../core/di/service_locator.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/utils/extensions/context_ext.dart';
+import '../../courses/presentation/bloc/courses_bloc.dart';
+import '../../courses/presentation/bloc/courses_event.dart';
 import '../../courses/presentation/courses_page.dart';
 import 'dashboard_page.dart';
 import 'settings_page.dart';
@@ -26,18 +30,22 @@ class _DashboardShellState extends State<DashboardShell> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: Row(
-        children: [
-          _Sidebar(
-            items: _navItems,
-            selectedIndex: _selectedIndex,
-            onSelect: (i) => setState(() => _selectedIndex = i),
-            onSignOut: () => context.go('/login'),
-          ),
-          const VerticalDivider(width: 1),
-          Expanded(child: _buildContent()),
-        ],
+    return BlocProvider<CoursesBloc>(
+      create: (_) =>
+          serviceLocator<CoursesBloc>()..add(const CoursesLoadRequested()),
+      child: Scaffold(
+        body: Row(
+          children: [
+            _Sidebar(
+              items: _navItems,
+              selectedIndex: _selectedIndex,
+              onSelect: (i) => setState(() => _selectedIndex = i),
+              onSignOut: () => context.go('/login'),
+            ),
+            const VerticalDivider(width: 1),
+            Expanded(child: _buildContent()),
+          ],
+        ),
       ),
     );
   }

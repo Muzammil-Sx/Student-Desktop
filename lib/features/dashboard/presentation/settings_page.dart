@@ -1,19 +1,19 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:student_desktop/shared/widgets/app_text_field.dart';
 
-import '../../../core/di/providers.dart';
 import '../../../core/theme/app_spacing.dart';
+import '../../../core/theme/bloc/theme_bloc.dart';
+import '../../../core/theme/bloc/theme_event.dart';
+import '../../../core/theme/bloc/theme_state.dart';
 import '../../../shared/widgets/app_button.dart';
 
-class SettingsPage extends ConsumerWidget {
+class SettingsPage extends StatelessWidget {
   const SettingsPage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final themeMode = ref.watch(themeModeProvider);
-    final notifier = ref.read(themeModeProvider.notifier);
+  Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
 
     return SingleChildScrollView(
@@ -23,49 +23,62 @@ class SettingsPage extends ConsumerWidget {
         children: [
           Text('Settings', style: text.headlineMedium),
           const SizedBox(height: AppSpacing.xl),
-          AppCard(
-            child: Row(
-              children: [
-                const Icon(Icons.brightness_6_outlined),
-                const SizedBox(width: AppSpacing.md),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Theme', style: text.titleMedium),
-                      const SizedBox(height: AppSpacing.xxs),
-                      Text(
-                        'Currently: ${themeMode.name}',
-                        style: text.bodySmall,
+
+          // ---------- Theme ----------
+          BlocBuilder<ThemeBloc, ThemeState>(
+            builder: (context, state) {
+              return AppCard(
+                child: Row(
+                  children: [
+                    const Icon(Icons.brightness_6_outlined),
+                    const SizedBox(width: AppSpacing.md),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Theme', style: text.titleMedium),
+                          const SizedBox(height: AppSpacing.xxs),
+                          Text(
+                            'Currently: ${state.mode.name}',
+                            style: text.bodySmall,
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
-                ),
-                SegmentedButton<ThemeMode>(
-                  segments: const [
-                    ButtonSegment(
-                      value: ThemeMode.light,
-                      icon: Icon(Icons.light_mode_outlined),
-                      label: Text('Light'),
                     ),
-                    ButtonSegment(
-                      value: ThemeMode.system,
-                      icon: Icon(Icons.brightness_auto_outlined),
-                      label: Text('Auto'),
-                    ),
-                    ButtonSegment(
-                      value: ThemeMode.dark,
-                      icon: Icon(Icons.dark_mode_outlined),
-                      label: Text('Dark'),
+                    SegmentedButton<ThemeMode>(
+                      segments: const [
+                        ButtonSegment(
+                          value: ThemeMode.light,
+                          icon: Icon(Icons.light_mode_outlined),
+                          label: Text('Light'),
+                        ),
+                        ButtonSegment(
+                          value: ThemeMode.system,
+                          icon: Icon(Icons.brightness_auto_outlined),
+                          label: Text('Auto'),
+                        ),
+                        ButtonSegment(
+                          value: ThemeMode.dark,
+                          icon: Icon(Icons.dark_mode_outlined),
+                          label: Text('Dark'),
+                        ),
+                      ],
+                      selected: {state.mode},
+                      onSelectionChanged: (selection) {
+                        context
+                            .read<ThemeBloc>()
+                            .add(SetThemeMode(selection.first));
+                      },
                     ),
                   ],
-                  selected: {themeMode},
-                  onSelectionChanged: (s) => notifier.set(s.first),
                 ),
-              ],
-            ),
+              );
+            },
           ),
+
           const SizedBox(height: AppSpacing.lg),
+
+          // ---------- Sign out ----------
           AppCard(
             child: Row(
               children: [

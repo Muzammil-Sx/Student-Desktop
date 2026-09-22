@@ -1,35 +1,46 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/utils/extensions/context_ext.dart';
-import '../../courses/domain/courses_provider.dart';
+import '../../../shared/widgets/state_views/loading_view.dart';
+import '../../courses/domain/course.dart';
+import '../../courses/presentation/bloc/courses_bloc.dart';
+import '../../courses/presentation/bloc/courses_state.dart';
 import 'widgets/activity_tile.dart';
 import 'widgets/continue_learning_card.dart';
 import 'widgets/stat_card.dart';
 
-class DashboardPage extends ConsumerWidget {
+class DashboardPage extends StatelessWidget {
   const DashboardPage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final stats = ref.watch(courseStatsProvider);
-    final continueLearning = ref.watch(continueLearningProvider);
+  Widget build(BuildContext context) {
+    return BlocBuilder<CoursesBloc, CoursesState>(
+      builder: (context, state) {
+        if (state.status == CoursesStatus.loading && state.courses.isEmpty) {
+          return const LoadingView(message: 'Loading dashboard...');
+        }
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(AppSpacing.xxl),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const _GreetingHeader(),
-          const SizedBox(height: AppSpacing.xxl),
-          _StatsRow(stats: stats),
-          const SizedBox(height: AppSpacing.xxl),
-          _ContinueLearning(courses: continueLearning),
-          const SizedBox(height: AppSpacing.xxl),
-          const _RecentActivity(),
-        ],
-      ),
+        final stats = state.stats;
+        final continueLearning = state.continueLearning;
+
+        return SingleChildScrollView(
+          padding: const EdgeInsets.all(AppSpacing.xxl),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const _GreetingHeader(),
+              const SizedBox(height: AppSpacing.xxl),
+              _StatsRow(stats: stats),
+              const SizedBox(height: AppSpacing.xxl),
+              _ContinueLearning(courses: continueLearning),
+              const SizedBox(height: AppSpacing.xxl),
+              const _RecentActivity(),
+            ],
+          ),
+        );
+      },
     );
   }
 }
@@ -57,7 +68,7 @@ class _GreetingHeader extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('$greeting, Muzammmil 👋', style: text.headlineMedium),
+              Text('$greeting, Alpha 👋', style: text.headlineMedium),
               const SizedBox(height: AppSpacing.xxs),
               Text(
                 "Here's your learning summary for today.",
@@ -138,7 +149,7 @@ class _StatsRow extends StatelessWidget {
 class _ContinueLearning extends StatelessWidget {
   const _ContinueLearning({required this.courses});
 
-  final List courses;
+  final List<Course> courses;
 
   @override
   Widget build(BuildContext context) {
@@ -151,15 +162,12 @@ class _ContinueLearning extends StatelessWidget {
           children: [
             Text('Continue learning', style: text.titleLarge),
             const Spacer(),
-            Text(
-              '${courses.length} active',
-              style: text.bodySmall,
-            ),
+            Text('${courses.length} active', style: text.bodySmall),
           ],
         ),
         const SizedBox(height: AppSpacing.lg),
         if (courses.isEmpty)
-          _EmptyRow()
+          const _EmptyRow()
         else
           SizedBox(
             height: 200,
@@ -178,6 +186,8 @@ class _ContinueLearning extends StatelessWidget {
 }
 
 class _EmptyRow extends StatelessWidget {
+  const _EmptyRow();
+
   @override
   Widget build(BuildContext context) {
     final text = context.text;

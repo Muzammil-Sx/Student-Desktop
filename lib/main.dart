@@ -1,13 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:window_manager/window_manager.dart';
 
 import 'app/app.dart';
-import 'core/cache/cache_service.dart';
-import 'core/connectivity/connectivity_service.dart';
 import 'core/constants/app_constants.dart';
-import 'core/database/app_database.dart';
-import 'core/di/providers.dart';
+import 'core/di/service_locator.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -15,8 +11,14 @@ Future<void> main() async {
   // ---------- Desktop window ----------
   await windowManager.ensureInitialized();
   const windowOptions = WindowOptions(
-    size: Size(AppConstants.windowInitialWidth, AppConstants.windowInitialHeight),
-    minimumSize: Size(AppConstants.windowMinWidth, AppConstants.windowMinHeight),
+    size: Size(
+      AppConstants.windowInitialWidth,
+      AppConstants.windowInitialHeight,
+    ),
+    minimumSize: Size(
+      AppConstants.windowMinWidth,
+      AppConstants.windowMinHeight,
+    ),
     center: true,
     title: AppConstants.appName,
   );
@@ -25,23 +27,9 @@ Future<void> main() async {
     await windowManager.focus();
   });
 
-  // ---------- Async infrastructure ----------
-  final cache = await CacheService.init();
-
-  final connectivity = ConnectivityService();
-  await connectivity.start();
-
-  final database = AppDatabase();
+  // ---------- Service Locator ----------
+  await setupServiceLocator();
 
   // ---------- Run ----------
-  runApp(
-    ProviderScope(
-      overrides: [
-        cacheServiceProvider.overrideWithValue(cache),
-        connectivityServiceProvider.overrideWithValue(connectivity),
-        appDatabaseProvider.overrideWithValue(database),
-      ],
-      child: const StudentDesktopApp(),
-    ),
-  );
+  runApp(const StudentDesktopApp());
 }

@@ -1,38 +1,72 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../core/theme/app_radius.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/utils/extensions/context_ext.dart';
 import '../../../shared/widgets/state_views/empty_view.dart';
+import '../../../shared/widgets/state_views/error_view.dart';
+import '../../../shared/widgets/state_views/loading_view.dart';
 import '../domain/course.dart';
-import '../domain/courses_provider.dart';
+import 'bloc/courses_bloc.dart';
+import 'bloc/courses_event.dart';
+import 'bloc/courses_state.dart';
 import 'widgets/course_card.dart';
 
-class CoursesPage extends ConsumerWidget {
+class CoursesPage extends StatelessWidget {
   const CoursesPage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final courses = ref.watch(filteredCoursesProvider);
-    final allEmpty = ref.watch(allCoursesProvider).isEmpty;
-    final filter = ref.watch(courseFilterProvider);
-    final search = ref.watch(courseSearchProvider);
-
+  Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        _Header(),
-        _Controls(),
+        const _Header(),
+        const _Controls(),
         const SizedBox(height: AppSpacing.lg),
         Expanded(
-          child: courses.isEmpty
-              ? _EmptyContent(
-                  hasAnyCourse: !allEmpty,
-                  filter: filter,
-                  search: search,
-                )
-              : _CoursesGrid(courses: courses),
+          child: BlocBuilder<CoursesBloc, CoursesState>(
+            builder: (context, state) {
+              if (state.status == CoursesStatus.loading &&
+                  state.courses.isEmpty) {
+                return const LoadingView(message: 'Loading courses...');
+              }
+              if (state.status == CoursesStatus.failure &&
+                  state.courses.isEmpty) {
+                return ErrorView(
+                  message: state.errorMessage ?? 'Failed to load courses',
+                  onRetry: () => context
+                      .read<CoursesBloc>()
+                      .add(const CoursesLoadRequested()),
+                );
+              }
+              if (state.courses.isEmpty) {
+                return const EmptyView(
+                  icon: Icons.menu_book_outlined,
+                  title: 'No courses yet',
+                  subtitle:
+                      'Once you enroll in a course, it will appear here.',
+                );
+              }
+
+              final filtered = state.filteredCourses;
+              if (filtered.isEmpty) {
+                return EmptyView(
+                  icon: Icons.search_off_outlined,
+                  title: 'No matches',
+                  subtitle: state.search.trim().isNotEmpty
+                      ? 'No courses match "${state.search}".'
+                      : 'No courses match "${state.filter.label}".',
+                  actionLabel: 'Clear filters',
+                  onAction: () => context
+                      .read<CoursesBloc>()
+                      .add(const CoursesFiltersCleared()),
+                );
+              }
+
+              return _CoursesGrid(courses: filtered);
+            },
+          ),
         ),
       ],
     );
@@ -44,6 +78,8 @@ class CoursesPage extends ConsumerWidget {
 // ------------------------------------------------------------
 
 class _Header extends StatelessWidget {
+  const _Header();
+
   @override
   Widget build(BuildContext context) {
     final text = context.text;
@@ -59,10 +95,7 @@ class _Header extends StatelessWidget {
         children: [
           Text('My Courses', style: text.headlineMedium),
           const SizedBox(height: AppSpacing.xxs),
-          Text(
-            'All the courses you are enrolled in.',
-            style: text.bodySmall,
-          ),
+          Text('All the courses you are enrolled in.', style: text.bodySmall),
         ],
       ),
     );
@@ -73,14 +106,31 @@ class _Header extends StatelessWidget {
 // Search + Filter row
 // ------------------------------------------------------------
 
-class _Controls extends ConsumerWidget {
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final filter = ref.watch(courseFilterProvider);
-    final search = ref.watch(courseSearchProvider);
-    final searchCtrl = TextEditingController(text: search);
-    searchCtrl.selection = TextSelection.collapsed(offset: search.length);
+class _Controls extends StatefulWidget {
+  const _Controls();
 
+  @override
+  State<_Controls> createState() => _ControlsState();
+}
+
+class _ControlsState extends State<_Controls> {
+  late final TextEditingController _searchCtrl;
+
+  @override
+  void initState() {
+    super.initState();
+    final initial = context.read<CoursesBloc>().state.search;
+    _searchCtrl = TextEditingController(text: initial);
+  }
+
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xxl),
       child: Row(
@@ -89,8 +139,10 @@ class _Controls extends ConsumerWidget {
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 420),
               child: TextField(
-                controller: searchCtrl,
-                onChanged: (v) => ref.read(courseSearchProvider.notifier).set(v),
+                controller: _searchCtrl,
+                onChanged: (v) => context
+                    .read<CoursesBloc>()
+                    .add(CoursesSearchChanged(v)),
                 decoration: const InputDecoration(
                   hintText: 'Search by title, instructor, or category',
                   prefixIcon: Icon(Icons.search, size: 20),
@@ -99,9 +151,15 @@ class _Controls extends ConsumerWidget {
             ),
           ),
           const Spacer(),
-          _FilterChips(
-            selected: filter,
-            onSelect: (f) => ref.read(courseFilterProvider.notifier).set(f),
+          BlocBuilder<CoursesBloc, CoursesState>(
+            buildWhen: (a, b) => a.filter != b.filter,
+            builder: (context, state) {
+              return _FilterChips(
+                selected: state.filter,
+                onSelect: (f) =>
+                    context.read<CoursesBloc>().add(CoursesFilterChanged(f)),
+              );
+            },
           ),
         ],
       ),
@@ -209,49 +267,6 @@ class _CoursesGrid extends StatelessWidget {
           itemCount: courses.length,
           itemBuilder: (context, i) => CourseCard(course: courses[i]),
         );
-      },
-    );
-  }
-}
-
-// ------------------------------------------------------------
-// Empty
-// ------------------------------------------------------------
-
-class _EmptyContent extends ConsumerWidget {
-  const _EmptyContent({
-    required this.hasAnyCourse,
-    required this.filter,
-    required this.search,
-  });
-
-  final bool hasAnyCourse;
-  final CourseFilter filter;
-  final String search;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    if (!hasAnyCourse) {
-      return const EmptyView(
-        icon: Icons.menu_book_outlined,
-        title: 'No courses yet',
-        subtitle:
-            'Once you enroll in a course, it will appear here. You can also try refreshing after syncing.',
-      );
-    }
-
-    // Filtered to nothing
-    final hasSearch = search.trim().isNotEmpty;
-    return EmptyView(
-      icon: Icons.search_off_outlined,
-      title: 'No matches',
-      subtitle: hasSearch
-          ? 'No courses match "$search". Try a different search or filter.'
-          : 'No courses match "${filter.label}". Try a different filter.',
-      actionLabel: 'Clear filters',
-      onAction: () {
-        ref.read(courseSearchProvider.notifier).clear();
-        ref.read(courseFilterProvider.notifier).set(CourseFilter.all);
       },
     );
   }
