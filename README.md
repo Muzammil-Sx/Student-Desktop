@@ -414,7 +414,7 @@ Bloc provides:
 
 ## 📄 License
 
-Private — internal use only. © 2026 Alpha.
+Private — internal use only. © 2026 Muzammil Hussain.
 
 ---
 
