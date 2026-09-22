@@ -420,7 +420,7 @@ Private — internal use only. © 2026 Alpha.
 
 ## 👤 Author
 
-**Alpha**
+**Muzammil Hussain**
 Flutter Desktop Application — Enterprise Edition
 
 ---
