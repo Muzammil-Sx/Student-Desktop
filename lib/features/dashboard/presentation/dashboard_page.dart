@@ -68,7 +68,7 @@ class _GreetingHeader extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('$greeting, Alpha 👋', style: text.headlineMedium),
+              Text('$greeting, Muzammil Hussain 👋', style: text.headlineMedium),
               const SizedBox(height: AppSpacing.xxs),
               Text(
                 "Here's your learning summary for today.",
